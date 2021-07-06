@@ -51,6 +51,10 @@ while True:
 
     print("Please select the next ROI or press any key to finish.\n")
 
+if len(rois) == 0:
+    print("No ROI selected.")
+    exit(-1)
+
 # Check if all rois have the same number of columns
 
 first = rois[0][1]

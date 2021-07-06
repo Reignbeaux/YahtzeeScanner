@@ -2,38 +2,46 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-img_empty = cv.imread('test_empty.jpg',0) # read as grayscale
+template = cv.imread('template.jpg',0) # read as grayscale
 img_filled = cv.imread('test_filled.jpg',0) # read as grayscale
 
-# Feature matching
-img2 = cv.adaptiveThreshold(img_empty,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
-            cv.THRESH_BINARY,5,2)
-img1 = cv.adaptiveThreshold(img_filled,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
-            cv.THRESH_BINARY,11,2)
+"""
+# First, apply a threshold to get binary images
+template = cv.adaptiveThreshold(template,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv.THRESH_BINARY,51,15)
+img_filled = cv.adaptiveThreshold(img_filled,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv.THRESH_BINARY,51,15)
+# TODO: Calculate reasonable values for the thresholding from input image dimensions
 
-plt.imshow(img1, cmap=plt.cm.gray)
-plt.savefig("test.png")
+plt.imshow(template, cmap=plt.cm.gray)
 plt.figure()
-plt.imshow(img2, cmap=plt.cm.gray)
+plt.imshow(img_filled, cmap=plt.cm.gray)
 plt.show()
+"""
 
-orb = cv.ORB_create(nfeatures=500)
-kp1, des1 = orb.detectAndCompute(img1, None)
-kp2, des2 = orb.detectAndCompute(img2, None)
+img1 = template
+img2 = img_filled
 
-# matcher takes normType, which is set to cv2.NORM_L2 for SIFT and SURF, cv2.NORM_HAMMING for ORB, FAST and BRIEF
-bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
-matches = bf.match(des1, des2)
-matches = sorted(matches, key=lambda x: x.distance)
-# draw first 50 matches
-match_img = cv.drawMatches(img1, kp1, img2, kp2, matches[:50], None)
+# Initiate SIFT detector
+sift = cv.SIFT_create()
+# find the keypoints and descriptors with SIFT
+kp1, des1 = sift.detectAndCompute(img1,None)
+kp2, des2 = sift.detectAndCompute(img2,None)
+# BFMatcher with default params
+bf = cv.BFMatcher()
+matches = bf.knnMatch(des1,des2,k=2)
 
-plt.imshow(match_img)
-plt.show()
+# Apply ratio test
+good = []
+distances = []
+for m,n in matches:
+    if m.distance < 0.75*n.distance:
+        good.append([m])
+        distances.append(m.distance)
 
-#########################################################
-#plt.figure()
+print(distances)
+good = [x for _,x in sorted(zip(distances, good), key=lambda pair: pair[0])][0:4]
 
-#roi=cv.selectROI(edges, fromCenter = False)
-
-# Set rectangle
+# cv.drawMatchesKnn expects list of lists as matches.
+img3 = cv.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+plt.imshow(img3),plt.show()

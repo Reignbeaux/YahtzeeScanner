@@ -1,4 +1,3 @@
-- Move project to git 
 - Insert new photos without wrapped paper
 
 - Add possibility to update template metadata

@@ -1,47 +1,39 @@
 import numpy as np
 import cv2 as cv
-
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 img_empty = cv.imread('test_empty.jpg',0) # read as grayscale
-edges = cv.Canny(img_empty,100,140)
-plt.imshow(edges,cmap = 'gray')
-plt.title('Empty image'), plt.xticks([]), plt.yticks([])
-
-plt.figure()
-
 img_filled = cv.imread('test_filled.jpg',0) # read as grayscale
-edges = cv.Canny(img_filled,100,140)
-plt.imshow(edges,cmap = 'gray')
-plt.title('Filled image'), plt.xticks([]), plt.yticks([])
-
-plt.show()
 
 # Feature matching
-img2 = img_filled
-img1 = img_empty
+img2 = cv.adaptiveThreshold(img_empty,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv.THRESH_BINARY,5,2)
+img1 = cv.adaptiveThreshold(img_filled,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv.THRESH_BINARY,11,2)
 
-# Initiate SIFT detector
-sift = cv.SIFT_create()
-# find the keypoints and descriptors with SIFT
-kp1, des1 = sift.detectAndCompute(img1,None)
-kp2, des2 = sift.detectAndCompute(img2,None)
-# BFMatcher with default params
-bf = cv.BFMatcher()
-matches = bf.knnMatch(des1,des2,k=2)
-# Apply ratio test
-good = []
-for m,n in matches:
-    if m.distance < 0.4*n.distance:
-        good.append([m])
-# cv.drawMatchesKnn expects list of lists as matches.
-img3 = cv.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-plt.imshow(img3),plt.show()
-
+plt.imshow(img1, cmap=plt.cm.gray)
+plt.savefig("test.png")
 plt.figure()
+plt.imshow(img2, cmap=plt.cm.gray)
+plt.show()
 
-plt.imshow(edges,cmap='gray')
+orb = cv.ORB_create(nfeatures=500)
+kp1, des1 = orb.detectAndCompute(img1, None)
+kp2, des2 = orb.detectAndCompute(img2, None)
 
-roi=cv.selectROI(edges, fromCenter = False)
+# matcher takes normType, which is set to cv2.NORM_L2 for SIFT and SURF, cv2.NORM_HAMMING for ORB, FAST and BRIEF
+bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
+matches = bf.match(des1, des2)
+matches = sorted(matches, key=lambda x: x.distance)
+# draw first 50 matches
+match_img = cv.drawMatches(img1, kp1, img2, kp2, matches[:50], None)
+
+plt.imshow(match_img)
+plt.show()
+
+#########################################################
+#plt.figure()
+
+#roi=cv.selectROI(edges, fromCenter = False)
 
 # Set rectangle

@@ -3,8 +3,49 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import json
 
-template = cv.imread('template.jpg',0) # read as grayscale
-img_filled = cv.imread('test_filled.jpg',0) # read as grayscale
+import math
+import matplotlib.pyplot as plt
+
+template = cv.imread('template.jpg', 0)
+img_filled = cv.imread('filled.jpg',0)
+
+#############################################################
+
+# Loads an image
+src = cv.imread("filled.jpg", cv.IMREAD_GRAYSCALE)
+
+# edge detection:
+dst = cv.Canny(src, 50, 200, None, 3)
+
+# Copy edges to the images that will display the results in BGR
+cdst = cv.cvtColor(dst, cv.COLOR_GRAY2BGR)
+cdstP = np.copy(cdst)
+
+lines = cv.HoughLines(dst, 1, np.pi / 180, 250, None, 0, 0)
+
+if lines is not None:
+    for i in range(0, len(lines)):
+        rho = lines[i][0][0]
+        theta = lines[i][0][1]
+        a = math.cos(theta)
+        b = math.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
+        pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
+        cv.line(cdst, pt1, pt2, (0,0,255), 1, cv.LINE_AA)
+
+cv.imshow("Source", src)
+cv.imshow("Detected Lines (in red) - Standard Hough Line Transform", cdst)
+
+cv.waitKey()
+
+exit()
+
+# TODO: 
+# - Filter lines that are more than +- 10 degree off of beeing vertical / horizontal
+# - determine all enclosed rectangles with their respective size
+# - Look at histogram: Take rectangle size that appears the most, throw all others out
 
 with open("template.json", 'r') as jsonFile:
     rois = json.load(jsonFile)
@@ -43,11 +84,12 @@ good = [[x,y,z] for _, x, y, z in sorted(zip(distances, good, points_1, points_2
 
 coordinates = [x[1:3] for x in good]
 
-""" For evaluating the matches
-
+# for evaluating the matches
 # cv.drawMatchesKnn expects list of lists as matches.
-#img3 = cv.drawMatchesKnn(img1,kp1,img2,kp2,[x[0] for x in good],None,flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-#plt.imshow(img3),plt.show()
+img3 = cv.drawMatchesKnn(img1,kp1,img2,kp2,[x[0] for x in good],None,flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+plt.imshow(img3),plt.show()
+
+""" For evaluating the matches
 
 img1_toshow = img1.copy()
 img2_toshow = img2.copy()
@@ -94,7 +136,7 @@ for roi in rois:
     points_transformed = h.dot(points.T).T
 
     for point in points_transformed:
-        cv.circle(img2_toshow, (int(point[0]), int(point[1])), 2, (255,0,0), 10)
+        cv.circle(img2_toshow, (int(point[0]), int(point[1])), 2, (255,0,0), 20)
 
 cv.namedWindow('image2', cv.WINDOW_NORMAL)
 cv.imshow("image2", img2_toshow)
